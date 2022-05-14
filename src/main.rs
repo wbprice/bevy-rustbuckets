@@ -7,15 +7,28 @@ fn main() {
         .run();
 }
 
-#[derive(Component)]
-struct Quadrant {
-    pub x: i8,
-    pub y: i8,
-    pub ship: Option<bool>,
+const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
+const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
+const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
+
+enum Peg {
+    Hit,
+    Miss,
 }
 
-fn setup_gameboard(mut commands: Commands) {
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+#[derive(Component)]
+struct Position {
+    x: i8,
+    y: i8,
+}
+
+#[derive(Component)]
+struct Quadrant {
+    pub peg: Option<Peg>,
+}
+
+fn setup_gameboard(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn_bundle(UiCameraBundle::default());
 
     for x in 0..10 {
         for y in 0..10 {
@@ -24,15 +37,37 @@ fn setup_gameboard(mut commands: Commands) {
 
             commands
                 .spawn()
-                .insert(Quadrant { x, y, ship: None })
-                .insert_bundle(SpriteBundle {
-                    sprite: Sprite {
-                        color: Color::rgb(0., 1.0, 1.0),
-                        custom_size: Some(Vec2::new(48.0, 48.0)),
+                .insert(Quadrant { peg: None })
+                .insert(Position { x, y })
+                .insert_bundle(ButtonBundle {
+                    style: Style {
+                        size: Size::new(Val::Px(48.0), Val::Px(48.0)),
+                        position_type: PositionType::Absolute,
+                        position: Rect {
+                            left: Val::Px(x_pos),
+                            top: Val::Px(y_pos),
+                            ..default()
+                        },
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
                         ..default()
                     },
-                    transform: Transform::from_xyz(x_pos, y_pos, 1.0),
+                    color: NORMAL_BUTTON.into(),
                     ..default()
+                })
+                .with_children(|parent| {
+                    parent.spawn_bundle(TextBundle {
+                        text: Text::with_section(
+                            "B",
+                            TextStyle {
+                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                font_size: 24.0,
+                                color: Color::rgb(0.9, 0.9, 0.9),
+                            },
+                            Default::default(),
+                        ),
+                        ..default()
+                    });
                 });
         }
     }
