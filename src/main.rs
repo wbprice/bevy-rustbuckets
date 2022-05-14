@@ -12,20 +12,15 @@ const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
-enum Peg {
-    Hit,
-    Miss,
-}
-
-#[derive(Component)]
+#[derive(Component, Debug)]
 struct Position {
     x: i8,
     y: i8,
 }
 
-#[derive(Component)]
-struct Quadrant {
-    pub peg: Option<Peg>,
+#[derive(Component, Debug)]
+struct Peg {
+    pub hit: bool
 }
 
 fn setup_gameboard(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -38,7 +33,6 @@ fn setup_gameboard(mut commands: Commands, asset_server: Res<AssetServer>) {
 
             commands
                 .spawn()
-                .insert(Quadrant { peg: None })
                 .insert(Position { x, y })
                 .insert_bundle(ButtonBundle {
                     style: Style {
@@ -75,18 +69,25 @@ fn setup_gameboard(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn button_system(
+    mut commands: Commands,
     mut interaction_query: Query<
-        (&Interaction, &mut UiColor, &Children),
+        (Entity, &Interaction, &mut UiColor, &Children, &Position),
         (Changed<Interaction>, With<Button>),
+    >,
+    mut peg_query: Query<
+        (&Peg, &Position),
     >,
     mut text_query: Query<&mut Text>,
 ) {
-    for (interaction, mut color, children) in interaction_query.iter_mut() {
+    for (entity, interaction, mut color, children, position) in interaction_query.iter_mut() {
+
         let mut text = text_query.get_mut(children[0]).unwrap();
         match *interaction {
             Interaction::Clicked => {
                 text.sections[0].value = "P".to_string();
                 *color = PRESSED_BUTTON.into();
+                commands.entity(entity).insert(Peg { hit: true });
+                
             }
             Interaction::Hovered => {
                 text.sections[0].value = "H".to_string();
