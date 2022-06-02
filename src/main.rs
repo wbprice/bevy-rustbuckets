@@ -5,10 +5,11 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_startup_system(setup_gameboard)
         .add_system(button_system)
+        .add_system(peg_insert_system)
         .run();
 }
 
-const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
+const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 1.);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
 
@@ -20,7 +21,7 @@ struct Position {
 
 #[derive(Component, Debug)]
 struct Peg {
-    pub hit: bool
+    pub hit: bool,
 }
 
 fn setup_gameboard(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -51,16 +52,11 @@ fn setup_gameboard(mut commands: Commands, asset_server: Res<AssetServer>) {
                     ..default()
                 })
                 .with_children(|parent| {
-                    parent.spawn_bundle(TextBundle {
-                        text: Text::with_section(
-                            "B",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: 24.0,
-                                color: Color::rgb(0.9, 0.9, 0.9),
-                            },
-                            Default::default(),
-                        ),
+                    parent.spawn_bundle(NodeBundle {
+                        style: Style {
+                            size: Size::new(Val::Px(1.), Val::Px(1.)),
+                            ..default()
+                        },
                         ..default()
                     });
                 });
@@ -71,23 +67,18 @@ fn setup_gameboard(mut commands: Commands, asset_server: Res<AssetServer>) {
 fn button_system(
     mut commands: Commands,
     mut interaction_query: Query<
-        (Entity, &Interaction, &mut UiColor, &Children, &Position),
+        (Entity, &Interaction, &mut UiColor, &Children),
         (Changed<Interaction>, With<Button>),
-    >,
-    mut peg_query: Query<
-        (&Peg, &Position),
     >,
     mut text_query: Query<&mut Text>,
 ) {
-    for (entity, interaction, mut color, children, position) in interaction_query.iter_mut() {
-
+    for (entity, interaction, mut color, children) in interaction_query.iter_mut() {
         let mut text = text_query.get_mut(children[0]).unwrap();
         match *interaction {
             Interaction::Clicked => {
                 text.sections[0].value = "P".to_string();
                 *color = PRESSED_BUTTON.into();
                 commands.entity(entity).insert(Peg { hit: true });
-                
             }
             Interaction::Hovered => {
                 text.sections[0].value = "H".to_string();
@@ -98,5 +89,22 @@ fn button_system(
                 *color = NORMAL_BUTTON.into();
             }
         }
+    }
+}
+
+fn peg_insert_system(mut commands: Commands, peg_insert_query: Query<Entity, Added<Peg>>) {
+    for entity in peg_insert_query.iter() {
+        dbg!("handle inserting peg");
+        commands.entity(entity).with_children(|parent| {
+            parent.spawn_bundle(NodeBundle {
+                style: Style {
+                    size: Size::new(Val::Px(16.0), Val::Px(16.0)),
+                    border: Rect::all(Val::Px(2.0)),
+                    ..default()
+                },
+                color: Color::rgb(0.65, 0.65, 0.65).into(),
+                ..default()
+            });
+        });
     }
 }
